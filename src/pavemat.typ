@@ -310,7 +310,24 @@
   let dirs = (up: "W", down: "S", left: "A", right: "D") + dir-chars
 
   // get the matrix
-  let ma = if "body" in eq.fields() { eq.body } else { eq }
+  let ma = if type(eq) == content and "body" in eq.fields() {
+    eq.body
+  } else {
+    eq
+  }
+
+  // extract from sequence if necessary
+  if type(ma) == content and ma.func() == [].func() {
+    let found = ma.children.find(c => type(c) == content and c.func() == math.mat)
+    if found != none {
+      ma = found
+    }
+  }
+
+  // Handle array input by wrapping it in a math.mat
+  if type(ma) == array {
+    ma = math.mat(..ma)
+  }
 
   // pavement
   if type(pave) != array {
@@ -322,10 +339,19 @@
   }
 
   if block == auto {
-    block = eq.fields().at("block", default: auto)
+    if type(eq) == content and "block" in eq.fields() {
+      block = eq.fields().at("block")
+    } else {
+      block = auto
+    }
   }
 
   // number of rows and columns
+  if type(ma) != content or "rows" not in ma.fields() {
+    panic(
+      "pavemat: could not find a matrix in the input. Please ensure you pass a math.mat, an equation containing a math.mat, or a nested array.",
+    )
+  }
   let (n, m) = (ma.rows.len(), ma.rows.at(0).len())
 
   let (hfence, vfence, dashes) = _parse-pave-array(n, m, pave, dirs, debug, stroke)
